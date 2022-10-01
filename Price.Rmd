@@ -1,0 +1,227 @@
+---
+title: "Car Prices Analysis"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(Metrics)
+library(caret)
+```
+
+
+## Abstract:
+
+Geely Auto, a Chinese manufacturer, needs to break into the US market by establishing an assembly plant and producing automobiles domestically in order to compete with American and European counterparts. They've hired an automobile consulting business to help them understand the factors that influence vehicle costs. They are particularly interested in learning about the factors that influence car costs in the American market, as they may differ significantly from those in China. The data is taken from the Kaggle's website and could be found at https://www.kaggle.com/datasets/hellbuoy/car-price-prediction/download. Our main goal in this project is to analyze the data and fine some interesting insights and get an idea about what factors affects the prices of a car. This research will help the company in making business strategies and a  car buyer in deciding a car for him self based on his budget and he could get an idea of what type of specifications he / she will get in his/her budget.
+  
+## Introduction:
+
+In light of a few market research, the counseling organization has accumulated a massive data collection on various types of autos across the America market (Zuboff, 2015). We should show the estimate of autos using the offered free factors. The executives will utilize it to determine how expenses fluctuate in response to various elements. They can then alter the vehicle's plan, business strategy, and other elements to meet predetermined evaluation objectives. Furthermore, the approach would aid executives in comprehending the value features of a different market.
+
+
+## Literature Review:
+
+  This research article by Nakagawa et al. (2017) solved the same problem with linear regression model and the base model's R squared value obtained using his method is 83%. Parameter tuning is then performed and finally 6 variables are selected which are used to predict the prices of car. The final model's R square thus obtained is 88% in this case (Pan et al., 2018).The main research questions that would be answered through this project are: Which variables are important in forecasting a car's price, how well those factors accurately represent a car's pricing, and What factors affects the car prices positively or negatively.
+## Theory:
+
+H1- By implementing Regression analysis we get to know whether the car price is accurately proposed or overpriced according to their features.
+H2- people always face difficulty to choose the right car due to various manufactures in the market offering with different features at same price point.
+
+
+## Data:
+
+  The data has been downloaded from Kaggle, https://www.kaggle.com/datasets/hellbuoy/car-price-prediction/download, we have a total of 26 attributes in the data set which provides us certain data points. As far as cleaning the data is concerned, a couple of data pre-processing steps are applied which includes checking for null values and data type issues but our data is pretty much cleaned. However the Car ID column in unnecessary and doesn't provide any useful information, hence that is removed from the data set. A gist of our data set is attached below:
+
+```{r, echo=FALSE}
+data <- read.csv("CarPrice_Assignment.csv")
+head(data)
+```
+
+The data is made up of 205 records and 26 variables. 
+```{r}
+dim(data)
+```
+To ensure that accurate results will be obtained, we check for any missing values in the columns of the dataset. The result is false and this means that the data has no missing values. 
+```{r}
+anyNA(data)
+```
+```{r}
+summary(data)
+```
+```{r}
+str(data)
+```
+Convert variables to categorical variables
+```{r}
+data$fueltype<- as.factor(data$fueltype)
+data$fuelsystem<- as.factor(data$fuelsystem)
+data$enginelocation<- as.factor(data$enginelocation)
+data$enginetype<- as.factor(data$enginetype)
+data$carbody<- as.factor(data$carbody)
+data$drivewheel<- as.factor(data$drivewheel)
+```
+
+
+
+## Methodology:
+
+For the exploratory data analysis of exploring and insights generation of data points on the target variable price, box plots, correlation metrics and scatter plots are used. In order to have a look at the distribution of car prices a histogram is created. Finally, for forecasting the price of a car based on input features a linear regression model is created and evaluated on the data set to check the performance of forecasting model. The evaluation measure that is used in this case is RMSE, MSE and R squared. The higher the R square of model, the better is the performance. The lower the RMSE and MSE, the better is the model because the error is low.
+The first exploratory data analysis is the analysis of car price by the horsepower.
+```{r}
+ggplot(data, aes(x = horsepower, y = price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  xlab("horsepower") +
+  ylab("Price") +
+  ggtitle("Price of Car by horsepower")
+```
+```{r}
+ggplot(data, aes(x = carbody, y = price, fill = carbody)) + 
+  geom_boxplot(outlier.color = "red") + 
+  theme(legend.position = "none") +
+  xlab("carbody") +
+  ylab("Price") +
+  ggtitle("Price Distribution by carbody")
+```
+Next, is the exploratory analysis of the price of cars by engine location. 
+```{r}
+ggplot(data, aes(x = enginelocation, y = price, fill = carbody)) + 
+  geom_boxplot(outlier.color = "red") +
+  xlab("engine location") +
+  ylab("Price") +
+  ggtitle("Price Distribution of engine location")
+```
+
+Next step includes the creation of the logistic regression model.
+First split data to training and testing set.
+```{r}
+set.seed(444)
+
+data <- data %>%
+  select(-c(carbody,horsepower,enginelocation,enginesize))
+data$price <- log(data$price)
+colnames(data) <- make.names(colnames(data))
+
+train_split <- createDataPartition(y = data$price, p = 0.8, list = FALSE)
+
+training <- data[train_split,]
+testing <- data[-train_split,]
+```
+Create the logistic model
+```{r}
+options(warn = -1)
+lm <- trainControl(method = "repeatedcv", number = 10, repeats = 10)
+lm_model <- train(price~., data=training, 
+                   trControl = lm,
+                   method = "lm",
+                   metric = "Rsquared")
+```
+
+  
+## Results:
+
+Below is the histogram [4] of our model attached. It can be seen that the distribution of our target variable is skewed and not normally distributed in this case. This tells us that most of the cars that are present in the data set have a price up to 20,000. There are very less number of cars having prices above 20,000 in this case.
+
+```{r, echo=FALSE}
+data <- data[2:26,]
+hist(data$price, main = "Distribution of Prices", col= "steel blue", xlab = "Price")
+```
+
+Below is the correlation matrix plot [5] attached. From the correlation matrix plot, it can be observed that, if we look at the target variable price, most of the columns have a strong positive correlation with the target variable. A strong positive correlation means with increase in one variable, the other variable also increases and with decrease in one variable the other variable decreases. A strong negative correlation indicates that with increase in one value, the other value decreases and vice versa. The pairs having strong positive correlation with the price are WheelBase, Car length, car width, curb weight, engine size, horse power. The pairs having strong negative correlation with price are city mileage and highway mileage. Car height, stroke, compression ratio and peak rpm has no correlation with the target variable.
+
+```{r, echo=FALSE}
+num_cols <- unlist(lapply(data, is.numeric))
+data_num <- data[ , num_cols]
+correlation <- cor(data_num)
+corrplot(correlation, method="circle")
+```
+
+In order to make sure that the conclusion drawn above are true and to support our conclusion, a set of scatter plots [6] are created to see the trend. It can be seen from below attached figures that except car mileage, all other variables have a linear relationship with target variable price and a linear positive trend line could be fitted to the graphs. This means with increase in these variables, the price of cars also increases. For city mileage and price, the linear negative trend line could be fitted which represents a negative relationship with target variable price of car.
+
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(data$citympg, 
+     data$price, 
+     main = "City Mileage of Car vs Car Price", 
+     xlab = "City MPG", 
+     ylab = "Price",
+     pch = 17,
+     col = "red")
+
+
+plot(data$carlength, 
+     data$price, 
+     main = "Length of Car vs Car Price", 
+     xlab = "Length", 
+     ylab = "Price",
+     pch = 19,
+     col = "green")
+```
+
+
+In order to see the effect of categorical variables on car prices, a series of box plots have been created. It can be seen from below attached figures that average car prices of cars having fuel type "Diesel" is higher as compared to cars having fuel type "Gas". This means Diesel cars tends to be expensive as compared to Gas cars. Same goes for number of doors. Four door cars tends to have higher average price as compared to average price of two door cars. The most expensive cars having highest average price according to box plots attached below is sedan and the least expensive car having lowest average price is hatchback. Finally, four cylinder cars are inexpensive and have lowest average prices while 12 cylinders cars have highest average car prices.
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+boxplot(data$price ~ data$fueltype, 
+        main = "Fuel Type vs Price of Car", 
+        xlab = "Fuel Type", 
+        ylab = "Price",
+        col = "red")
+
+boxplot(data$price ~ data$doornumber, 
+        main = "Number of Doors vs Price of Car", 
+        xlab = "No. of Doors", 
+        ylab = "Price",
+        col = "green")
+
+
+boxplot(data$price ~ data$cylindernumber, 
+        main = "No. of Cylinders vs Price of Car", 
+        xlab = "No. of Cylinders", 
+        ylab = "Price",
+        col = "purple")
+```
+
+Finally, a regression model is created and the summary of our model is attached below. It can be seen that the R square of our model is 85% which means the model was able to explain 85% variability in our data set. The p value of our overall model is less than significance level alpha = 0.05, we can say that the model is significant in this case.  
+
+```{r, echo=FALSE}
+model <- lm(price ~., data = data_num)
+summary(model)
+```
+
+The accuracy of our forecasting model is calculated below. The Root mean square error of our model is 0.189 while the mean absolute error is 0.144. This error could further be reduced if we perform parameters tuning and have more meaningful data.
+
+```{r, echo=FALSE}
+pred <- predict(model, data)
+paste0("The root mean squared error is : ", RMSE(pred, data$price))
+paste0("The Mean Absolute Error is : ", MAE(pred, data$price))
+```
+
+## Implications:
+
+  Future study that could be done in this area is to gather more information about cars such as number of airbags, automatic or manual transmission and having more data about cars and types of cars would definitely improve the results of this analysis and will provide the results at granular level.
+  
+  
+## Conclusion:
+
+  In this project, we have analyzed the cars data set and provided a forecasting model. We have explored that engine size, number of cylinders, horse power and length of car affects the prices of a cars positively. The greater the length of car,
+the greater the number of cylinders, the greater the engine size, the greater the price of car. We further built a forecasting model using regression model to predict the prices of cars and found that the model was able to explain 85% variability in the target variable and the RMSE and MAE of our model is 0.188 and 0.144 respectively which indicates that the model can predict data more accurately.
+
+## References:
+Nakagawa, S., Johnson, P. C., & Schielzeth, H. (2017). The coefficient of determination R 2 and intra-class correlation coefficient from generalized linear mixed-effects models revisited and expanded. Journal of the Royal Society Interface, 14(134), 20170213.
+
+Pan, F., Zhu, P., & Zhang, Y. (2010). Metamodel-based lightweight design of B-pillar with TWB structure via support vector regression. Computers & structures, 88(1-2), 36-44.
+
+Zuboff, S. (2015). Big other: surveillance capitalism and the prospects of an information civilization. Journal of information technology, 30(1), 75-89.
+
+
